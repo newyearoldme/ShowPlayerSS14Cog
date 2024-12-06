@@ -1,47 +1,34 @@
 import requests
 import json
-from dotenv import load_dotenv
-import os
-from utils.config_loader import load_online_bots_config, OnlineServerBot
+from utils.config_manager import load_main_config
 
 
-load_dotenv()
+config = load_main_config()
 
-CONFIG_PATH = os.path.join("utils", "online_servers_bots.json")
-online_servers = load_online_bots_config(CONFIG_PATH)
-
-try:
-    servers = load_online_bots_config(CONFIG_PATH)
-except (FileNotFoundError, ValueError) as e:
-    print(f"Ошибка загрузки конфигурации серверов: {e}")
-    servers = []
-
-def fetch_player_list(server: OnlineServerBot):
+def fetch_player_list(server):
     headers = {
-        "Authorization": f"SS14Token {server.token}",
+        "Authorization": f"SS14Token {server['token']}",
         "Accept": "application/json",
         "Actor": json.dumps({
-            "Guid": os.getenv("ACTOR_GUID"),
-            "Name": os.getenv("ACTOR_NAME"),
+            "Guid": config["actor"]["guid"],
+            "Name": config["actor"]["name"],
         }),
     }
-    
+
     try:
-        r = requests.get(f"http://{server.ip}/admin/info", headers=headers)
-        print(f"Requesting data from {server.ip}")
-        print(f"Response: {r.status_code}, {r.text}")
+        # Выполняем запрос к API
+        r = requests.get(f"http://{server['ip']}/admin/info", headers=headers)
+        print(f"Запрос к серверу: {r}")
         if r.ok:
             data = r.json()
             players = data.get("Players", [])
             
-            # Фильтр по игрокам
             filtered_players = [
                 player for player in players
-                if not player.get("IsAdmin", False) or player.get("IsDeadminned", False)
+                if not player.get("IsAdmin", False) or player.get("IsDeadminned", True)
             ]
             return filtered_players
         else:
             return {"error": f"HTTP {r.status_code}: {r.text}"}
-    except requests.RequestException:
-        return (f"Ошибка подключения: невозможно подключиться к серверу {server.ip}. Проверьте соединение или используйте VPN")
-    
+    except requests.RequestException as e:
+        return {"error": f"Ошибка подключения: {e}"}
