@@ -3,6 +3,4 @@ main.py
 **/__pycache__/
 backend.py
 data/
-utils/config_loader.py
-utils/config.json
-utils/online_servers_bots.json
+utils/

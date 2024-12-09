@@ -1,20 +1,19 @@
 import aiohttp
 import json
-from utils.config_manager import load_main_config
+from .utils.config_loader import OnlineServerBot
 
-config = load_main_config()
 
-def create_headers(server):
+def create_headers(server: OnlineServerBot):
     return {
-        "Authorization": f"SS14Token {server['token']}",
+        "Authorization": f"SS14Token {server.token}",
         "Accept": "application/json",
         "Actor": json.dumps({
-            "Guid": config["actor"]["guid"],
-            "Name": config["actor"]["name"],
+            "Guid": "4ea95dec-2225-4fa2-ba15-68af263873b0",
+            "Name": "newyear",
         }),
     }
 
-async def fetch_data(url, headers):
+async def fetch_data(url: str, headers: dict):
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
             async with session.get(url, headers=headers) as r:
@@ -25,8 +24,8 @@ async def fetch_data(url, headers):
     except aiohttp.ClientError as e:
         return {"error": f"Ошибка подключения: {e}"}
 
-async def fetch_player_list(server):
-    url = f"http://{server['ip']}/admin/info"
+async def fetch_player_list(server: OnlineServerBot):
+    url = f"http://{server.ip}/admin/info"
     headers = create_headers(server)
     data = await fetch_data(url, headers)
 
@@ -39,8 +38,8 @@ async def fetch_player_list(server):
         if not player.get("IsAdmin", False) or player.get("IsDeadminned", True)
     ]
 
-async def fetch_admin_players(server):
-    url = f"http://{server['ip']}/admin/players"
+async def fetch_admin_players(server: OnlineServerBot):
+    url = f"http://{server.ip}/admin/players"
     headers = create_headers(server)
     data = await fetch_data(url, headers)
 
