@@ -1,11 +1,15 @@
 import aiohttp
 import json
-from .utils.config_loader import OnlineServerBot
+
+if "request" in __name__:
+    from utils.config_loader import OnlineServerBot
+else:
+    from .utils.config_loader import OnlineServerBot
 
 
 def create_headers(server: OnlineServerBot):
     return {
-        "Authorization": f"SS14Token {server.token}",
+        "Authorization": f"SS14Token {server.admin_token}",
         "Accept": "application/json",
         "Actor": json.dumps({
             "Guid": "4ea95dec-2225-4fa2-ba15-68af263873b0",
