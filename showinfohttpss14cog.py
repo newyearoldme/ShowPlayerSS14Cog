@@ -11,7 +11,7 @@ else:
 class PlayerListCog(commands.Cog):
     def __init__(self, client):
         self.client = client
-        self.servers = load_online_bots_config("utils/online_servers_bots.json")
+        self.servers = load_online_bots_config("online_servers_bots.json")
 
     # Автодополнение
     async def server_autocomplete(self, ctx: discord.AutocompleteContext):

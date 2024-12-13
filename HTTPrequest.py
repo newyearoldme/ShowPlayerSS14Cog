@@ -1,10 +1,6 @@
 import aiohttp
 import json
-
-if "cogs" in __name__:
-    from .utils.config_loader import OnlineServerBot
-else:
-    from utils.config_loader import OnlineServerBot
+from utils.config_loader import OnlineServerBot
 
 
 def create_headers(server: OnlineServerBot):
