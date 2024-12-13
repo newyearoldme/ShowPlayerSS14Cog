@@ -1,10 +1,10 @@
 import aiohttp
 import json
 
-if "request" in __name__:
-    from utils.config_loader import OnlineServerBot
-else:
+if "cogs" in __name__:
     from .utils.config_loader import OnlineServerBot
+else:
+    from utils.config_loader import OnlineServerBot
 
 
 def create_headers(server: OnlineServerBot):

@@ -1,7 +1,11 @@
 import discord
 from discord.ext import commands
 from utils.config_loader import load_online_bots_config
-from HTTPrequest import fetch_player_list, fetch_admin_players
+
+if "cogs" in __name__:
+    from .HTTPrequest import fetch_player_list, fetch_admin_players
+else:
+    from HTTPrequest import fetch_player_list, fetch_admin_players
 
 
 class PlayerListCog(commands.Cog):
