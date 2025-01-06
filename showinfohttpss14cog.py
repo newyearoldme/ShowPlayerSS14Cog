@@ -91,12 +91,12 @@ class PlayerListCog(commands.Cog):
         selected_server = servers[server]
 
         if list_type == "player_list":
-            result = await fetch_player_list(selected_server)
+            result = fetch_player_list(selected_server)
             title = f"Игроки на сервере {selected_server.name}"
             description = "Список игроков:"
             color = discord.Color.blue()
         else:  # list_type == "admin_list"
-            result = await fetch_admin_players(selected_server)
+            result = fetch_admin_players(selected_server)
             title = f"Администраторы на сервере {selected_server.name}"
             description = "Список администраторов:"
             color = discord.Color.green()
@@ -122,11 +122,18 @@ class PlayerListCog(commands.Cog):
             admins = result
             pages = [f"**{admin_name}** - *{details if isinstance(details, str) else 'Без титула'}*" for admin_name, details in admins.items()]
 
-        # Разбиваем на страницы, если слишком много данных
-        for i in range(0, len(pages), 10):
+        for i in range(0, len(pages), 5):
+            chunk = pages[i:i + 5]
+            text = "\n".join(chunk)
+            if len(text) > 1024:
+                text = text[:1021] + "..."
             embed_page = discord.Embed(title=title, description=description, color=color)
             embed_page.set_footer(text=f"IP сервера: {selected_server.ip}")
-            embed_page.add_field(name=f"**Страница {i // 10 + 1} / {(len(pages) - 1) // 10 + 1}**", value="\n".join(pages[i:i + 10]), inline=False)
+            embed_page.add_field(
+                name=f"**Страница {i // 5 + 1} / {(len(pages) - 1) // 5 + 1}**", 
+                value=text, 
+                inline=False
+            )
             embeds.append(embed_page)
 
         if embeds:

@@ -1,4 +1,4 @@
-import aiohttp
+import requests
 import json
 from utils.config_loader import OnlineServerBot
 
@@ -13,21 +13,23 @@ def create_headers(server: OnlineServerBot):
         }),
     }
 
-async def fetch_data(url: str, headers: dict):
+
+def fetch_data(url: str, headers: dict):
     try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-            async with session.get(url, headers=headers) as r:
-                if r.ok:
-                    return await r.json()
-                else:
-                    return {"error": f"HTTP {r.status}: {await r.text()}"}
-    except aiohttp.ClientError as e:
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.ok:
+            return r.json()
+        else:
+            return {"error": f"HTTP {r.status_code}: {r.text}"}
+    except requests.RequestException as e:
         return {"error": f"Ошибка подключения: {e}"}
 
-async def fetch_player_list(server: OnlineServerBot):
+
+def fetch_player_list(server: OnlineServerBot):
     url = f"http://{server.ip}/admin/info"
     headers = create_headers(server)
-    data = await fetch_data(url, headers)
+    data = fetch_data(url, headers)
+    print(data)
 
     if "error" in data:
         return data
@@ -38,10 +40,12 @@ async def fetch_player_list(server: OnlineServerBot):
         if not player.get("IsAdmin", False) or player.get("IsDeadminned", True)
     ]
 
-async def fetch_admin_players(server: OnlineServerBot):
+
+def fetch_admin_players(server: OnlineServerBot):
     url = f"http://{server.ip}/admin/players"
     headers = create_headers(server)
-    data = await fetch_data(url, headers)
+    data = fetch_data(url, headers)
+    print(data)
 
     if "error" in data:
         return data
