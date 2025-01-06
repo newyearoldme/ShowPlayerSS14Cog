@@ -68,7 +68,6 @@ class PlayerListCog(commands.Cog):
         return [srv.name for srv in self.servers]
 
     @commands.slash_command(description="Получить список игроков или администраторов")
-    @commands.cooldown(1, 20, commands.BucketType.user)
     async def show_player_list(
         self,
         ctx: discord.ApplicationContext,
