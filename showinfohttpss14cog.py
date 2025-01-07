@@ -9,11 +9,19 @@ else:
 
 
 class PaginatedView(discord.ui.View):
-    def __init__(self, embeds):
+    def __init__(self, embeds: list[discord.Embed]):
         super().__init__()
         self.embeds = embeds
         self.current_page = 0
-        self.message = None
+        self.message: discord.WebhookMessage | None = None
+        self.update_buttons()
+
+    def update_buttons(self):
+        """Обновляет состояние кнопок в зависимости от текущей страницы."""
+        self.first_page.disabled = self.current_page == 0
+        self.previous_page.disabled = self.current_page == 0
+        self.next_page.disabled = self.current_page == len(self.embeds) - 1
+        self.last_page.disabled = self.current_page == len(self.embeds) - 1
 
     async def on_timeout(self):
         """Прекращаем работу после таймаута."""
@@ -25,38 +33,44 @@ class PaginatedView(discord.ui.View):
     @discord.ui.button(label="⏪", style=discord.ButtonStyle.secondary)
     async def first_page(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.current_page = 0
+        self.update_buttons()
         await self.update_embed(interaction)
 
     @discord.ui.button(label="◀️", style=discord.ButtonStyle.secondary)
     async def previous_page(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.current_page = max(0, self.current_page - 1)
+        self.update_buttons()
         await self.update_embed(interaction)
 
     @discord.ui.button(label="▶️", style=discord.ButtonStyle.secondary)
     async def next_page(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.current_page = min(len(self.embeds) - 1, self.current_page + 1)
+        self.update_buttons()
         await self.update_embed(interaction)
 
     @discord.ui.button(label="⏩", style=discord.ButtonStyle.secondary)
     async def last_page(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.current_page = len(self.embeds) - 1
+        self.update_buttons()
         await self.update_embed(interaction)
 
     @discord.ui.button(label="❌", style=discord.ButtonStyle.red)
     async def stop(self, button: discord.ui.Button, interaction: discord.Interaction):
-        """Останавливаем пагинацию (удаляет сообщение)"""
+        """Останавливаем пагинацию (удаляет сообщение)."""
         if self.message:
-            await self.message.delete()  # Удаляем сообщение
-            self.clear_items() # Останавливаем пагинацию
+            await self.message.delete()
+            self.clear_items()
 
     async def update_embed(self, interaction: discord.Interaction):
-        """Обновляем текущий Embed"""
+        """Обновляет текущий Embed и состояние кнопок."""
         if self.message:
             await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
 
-    async def send(self, ctx: discord.ApplicationContext):
-        """Отправляем первое сообщение и активируем пагинацию"""
+    async def send(self, ctx):
+        """Отправляем первое сообщение и активируем пагинацию."""
+        self.update_buttons()
         self.message = await ctx.respond(embed=self.embeds[self.current_page], view=self)
+
 
 
 class PlayerListCog(commands.Cog):
