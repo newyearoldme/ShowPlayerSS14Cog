@@ -29,14 +29,13 @@ def fetch_player_list(server: OnlineServerBot):
     url = f"http://{server.ip}/admin/info"
     headers = create_headers(server)
     data = fetch_data(url, headers)
-    print(data)
 
     if "error" in data:
         return data
 
     players = data.get("Players", [])
     return [
-        player for player in players
+        player.get("Name") for player in players
         if not player.get("IsAdmin", False) or player.get("IsDeadminned", True)
     ]
 
@@ -45,13 +44,12 @@ def fetch_admin_players(server: OnlineServerBot):
     url = f"http://{server.ip}/admin/players"
     headers = create_headers(server)
     data = fetch_data(url, headers)
-    print(data)
 
     if "error" in data:
         return data
 
     admins = data.get("admins", {})
     return {
-        admin_name: attributes.get("title", "Без титула")
+        admin_name: attributes.get("title", "Без поста")
         for admin_name, attributes in admins.items()
     }

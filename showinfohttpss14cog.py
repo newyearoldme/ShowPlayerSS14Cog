@@ -16,10 +16,10 @@ class PaginatedView(discord.ui.View):
         self.message = None
 
     async def on_timeout(self):
-        """Прекращаем работу после того, как прошло достаточно времени."""
+        """Прекращаем работу после таймаута."""
         for button in self.children:
             button.disabled = True
-        if self.message:  # Проверяем, что сообщение существует
+        if self.message:
             await self.message.edit(view=self)
 
     @discord.ui.button(label="⏪", style=discord.ButtonStyle.secondary)
@@ -44,110 +44,106 @@ class PaginatedView(discord.ui.View):
 
     @discord.ui.button(label="❌", style=discord.ButtonStyle.red)
     async def stop(self, button: discord.ui.Button, interaction: discord.Interaction):
-        """Кнопка для завершения работы с пагинацией (удаляет сообщение)."""
+        """Останавливаем пагинацию (удаляет сообщение)"""
         if self.message:
             await self.message.delete()  # Удаляем сообщение
             self.clear_items() # Останавливаем пагинацию
 
     async def update_embed(self, interaction: discord.Interaction):
-        """Обновляем embed для отображения текущей страницы."""
-        if self.message:  # Проверяем, что сообщение существует
+        """Обновляем текущий Embed"""
+        if self.message:
             await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
 
-    async def send(self, ctx):
-        """Отправляем первое сообщение и начнем пагинацию."""
+    async def send(self, ctx: discord.ApplicationContext):
+        """Отправляем первое сообщение и активируем пагинацию"""
         self.message = await ctx.respond(embed=self.embeds[self.current_page], view=self)
+
 
 class PlayerListCog(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.servers = load_online_bots_config("online_servers_bots.json")
+        self.colors = {
+            "player_list": discord.Color.blue(),
+            "admin_list": discord.Color.green()
+        }
 
-    # Автодополнение для сервера
     async def server_autocomplete(self, ctx: discord.AutocompleteContext):
+        """Автодополнение для списка серверов."""
         return [srv.name for srv in self.servers]
 
-    @commands.slash_command(description="Получить список игроков или администраторов")
+    def create_embed_pages(self, title: str, description: str, items: list, color: discord.Color, footer:str) -> list:
+        """Создаёт страницы с Embed."""
+        embeds = []
+        for i in range(0, len(items), 5):
+            chunk = items[i:i + 5]
+            text = "\n".join(chunk)
+            if len(text) > 1024:
+                text = text[:1021] + "..."
+            embed = discord.Embed(title=title, description=description, color=color)
+            embed.set_footer(text=footer)
+            embed.add_field(
+                name=f"Страница {i // 5 + 1} из {(len(items) - 1) // 5 + 1}",
+                value=text,
+                inline=False,
+            )
+            embeds.append(embed)
+        return embeds
+
+    def get_list_data(self, selected_server, list_type):
+        """Получает данные для списка игроков или администраторов."""
+        if list_type == "player_list":
+            return fetch_player_list(selected_server)
+        elif list_type == "admin_list":
+            return fetch_admin_players(selected_server)
+        return None
+
+    async def handle_no_data(self, ctx: discord.ApplicationContext, server_name: str) -> None:
+        """Обрабатывает случай отсутствия данных на сервере"""
+        await ctx.respond(f"На сервере **{server_name}** нет данных для выбранного типа списка", ephemeral=True)
+
+    @commands.slash_command(description="Показать список игроков или администраторов на определённом сервере")
     async def show_player_list(
         self,
         ctx: discord.ApplicationContext,
-        server: str = discord.Option(
-            description="Выберите сервер",
-            autocomplete=server_autocomplete
-        ),
-        list_type: str = discord.Option(
-            description="Выберите тип списка",
-            choices=["player_list", "admin_list"]
-        ),
+        server: str = discord.Option(description="Выберите сервер", autocomplete=server_autocomplete),
+        list_type: str = discord.Option(description="Выберите тип списка", choices=["player_list", "admin_list"]),
     ):
         await ctx.defer()
 
-        # Обновляем список серверов
         servers = {srv.name: srv for srv in self.servers}
         if server not in servers:
             await ctx.respond("Указанный сервер не найден", ephemeral=True)
             return
 
         selected_server = servers[server]
-
-        if list_type == "player_list":
-            result = fetch_player_list(selected_server)
-            title = f"Игроки на сервере {selected_server.name}"
-            description = "Список игроков:"
-            color = discord.Color.blue()
-        else:  # list_type == "admin_list"
-            result = fetch_admin_players(selected_server)
-            title = f"Администраторы на сервере {selected_server.name}"
-            description = "Список администраторов:"
-            color = discord.Color.green()
+        result = self.get_list_data(selected_server, list_type)
 
         if isinstance(result, dict) and "error" in result:
             await ctx.respond(f"Ошибка: {result['error']}", ephemeral=True)
             return
-        
+
         if not result:
-            await ctx.respond(f"На сервере **{selected_server.name}** нет данных для выбранного типа списка", ephemeral=True)
+            await self.handle_no_data(ctx, selected_server.name)
             return
 
         # Формирование Embed
-        embed = discord.Embed(title=title, description=description, color=color)
-        embed.set_footer(text=f"IP сервера: {selected_server.ip}")
-
-        # Разделение на страницы
-        embeds = []
-        if list_type == "player_list":
-            players = result
-            pages = [f"**{player}**" for player in players]
-        else:  # list_type == "admin_list"
-            admins = result
-            pages = [f"**{admin_name}** - *{details if isinstance(details, str) else 'Без титула'}*" for admin_name, details in admins.items()]
-
-        for i in range(0, len(pages), 5):
-            chunk = pages[i:i + 5]
-            text = "\n".join(chunk)
-            if len(text) > 1024:
-                text = text[:1021] + "..."
-            embed_page = discord.Embed(title=title, description=description, color=color)
-            embed_page.set_footer(text=f"IP сервера: {selected_server.ip}")
-            embed_page.add_field(
-                name=f"**Страница {i // 5 + 1} / {(len(pages) - 1) // 5 + 1}**", 
-                value=text, 
-                inline=False
-            )
-            embeds.append(embed_page)
+        title = f"{'Игроки' if list_type == 'player_list' else 'Администраторы'} на сервере {selected_server.name}"
+        description = f"Список {'игроков' if list_type == 'player_list' else 'администраторов'}:"
+        footer = f"IP сервера: {selected_server.ip}"
+        items = (
+            [f"**{player}**" for player in result]
+            if list_type == "player_list"
+            else [f"**{name}** - *{details if details else 'Без титула'}*" for name, details in result.items()]
+        )
+        embeds = self.create_embed_pages(title, description, items, self.colors[list_type], footer)
 
         if embeds:
             view = PaginatedView(embeds)
             await view.send(ctx)
         else:
-            await ctx.respond(f"На сервере **{selected_server.name}** нет данных для выбранного типа списка", ephemeral=True)
+            await self.handle_no_data(ctx, selected_server.name)
 
-    @commands.Cog.listener()
-    async def on_application_command_error(self, ctx: discord.ApplicationContext, error):
-        if isinstance(error, commands.CommandOnCooldown):
-            await ctx.respond(f"Команда на кулдауне. Попробуйте снова через {round(error.retry_after, 2)} сек.", ephemeral=True)
-        else:
-            raise error
 
 def setup(client):
     client.add_cog(PlayerListCog(client))
