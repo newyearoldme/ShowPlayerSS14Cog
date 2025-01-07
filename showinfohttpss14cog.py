@@ -27,8 +27,11 @@ class PaginatedView(discord.ui.View):
         """Прекращаем работу после таймаута."""
         for button in self.children:
             button.disabled = True
-        if self.message:
-            await self.message.edit(view=self)
+        try:
+            if self.message:
+                await self.message.edit(view=self)
+        except discord.NotFound:
+            pass
 
     @discord.ui.button(label="⏪", style=discord.ButtonStyle.secondary)
     async def first_page(self, button: discord.ui.Button, interaction: discord.Interaction):
@@ -56,10 +59,14 @@ class PaginatedView(discord.ui.View):
 
     @discord.ui.button(label="❌", style=discord.ButtonStyle.red)
     async def stop(self, button: discord.ui.Button, interaction: discord.Interaction):
-        """Останавливаем пагинацию (удаляет сообщение)."""
+        """Останавливаем пагинацию (удаляет сообщение)"""
         if self.message:
-            await self.message.delete()
-            self.clear_items()
+            try:
+                await self.message.delete()
+            except discord.NotFound:
+                pass
+            self.message = None
+        self.clear_items()
 
     async def update_embed(self, interaction: discord.Interaction):
         """Обновляет текущий Embed и состояние кнопок."""
