@@ -93,18 +93,18 @@ class PlayerListCog(commands.Cog):
         """Автодополнение для списка серверов."""
         return [srv.name for srv in self.servers]
 
-    def create_embed_pages(self, title: str, description: str, items: list, color: discord.Color, footer:str) -> list:
+    def create_embed_pages(self, title: str, items: list, color: discord.Color, footer:str) -> list:
         """Создаёт страницы с Embed."""
         embeds = []
-        for i in range(0, len(items), 5):
-            chunk = items[i:i + 5]
+        for i in range(0, len(items), 10):
+            chunk = items[i:i + 10]
             text = "\n".join(chunk)
             if len(text) > 1024:
                 text = text[:1021] + "..."
-            embed = discord.Embed(title=title, description=description, color=color)
+            embed = discord.Embed(title=title, color=color)
             embed.set_footer(text=footer)
             embed.add_field(
-                name=f"Страница {i // 5 + 1} из {(len(items) - 1) // 5 + 1}",
+                name=f"Страница {i // 10 + 1} из {(len(items) - 1) // 10 + 1}",
                 value=text,
                 inline=False,
             )
@@ -150,14 +150,13 @@ class PlayerListCog(commands.Cog):
 
         # Формирование Embed
         title = f"{'Игроки' if list_type == 'player_list' else 'Администраторы'} на сервере {selected_server.name}"
-        description = f"Список {'игроков' if list_type == 'player_list' else 'администраторов'}:"
-        footer = f"IP сервера: {selected_server.ip}"
+        footer = f"Всего: {len(result)}"
         items = (
-            [f"**{player}**" for player in result]
+            [f"{player}" for player in result]
             if list_type == "player_list"
-            else [f"**{name}** - *{details if details else 'Без титула'}*" for name, details in result.items()]
+            else [f"**{name}** - {details if details else 'Без поста'}" for name, details in result.items()]
         )
-        embeds = self.create_embed_pages(title, description, items, self.colors[list_type], footer)
+        embeds = self.create_embed_pages(title, items, self.colors[list_type], footer)
 
         if embeds:
             view = PaginatedView(embeds)
