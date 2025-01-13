@@ -17,14 +17,14 @@ class PaginatedView(discord.ui.View):
         self.update_buttons()
 
     def update_buttons(self):
-        """Обновляет состояние кнопок в зависимости от текущей страницы."""
+        """Обновляет состояние кнопок в зависимости от текущей страницы"""
         self.first_page.disabled = self.current_page == 0
         self.previous_page.disabled = self.current_page == 0
         self.next_page.disabled = self.current_page == len(self.embeds) - 1
         self.last_page.disabled = self.current_page == len(self.embeds) - 1
 
     async def on_timeout(self):
-        """Прекращаем работу после таймаута."""
+        """Прекращает работу после таймаута"""
         for button in self.children:
             button.disabled = True
         try:
@@ -59,7 +59,7 @@ class PaginatedView(discord.ui.View):
 
     @discord.ui.button(label="❌", style=discord.ButtonStyle.red)
     async def stop(self, button: discord.ui.Button, interaction: discord.Interaction):
-        """Останавливаем пагинацию (удаляет сообщение)"""
+        """Останавливает пагинацию (удаляет сообщение)"""
         if self.message:
             try:
                 await self.message.delete()
@@ -69,15 +69,14 @@ class PaginatedView(discord.ui.View):
         self.clear_items()
 
     async def update_embed(self, interaction: discord.Interaction):
-        """Обновляет текущий Embed и состояние кнопок."""
+        """Обновляет текущий Embed и состояние кнопок"""
         if self.message:
             await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
 
     async def send(self, ctx):
-        """Отправляем первое сообщение и активируем пагинацию."""
+        """Отправляет первое сообщение и активирует пагинацию"""
         self.update_buttons()
         self.message = await ctx.respond(embed=self.embeds[self.current_page], view=self)
-
 
 
 class PlayerListCog(commands.Cog):
@@ -93,8 +92,8 @@ class PlayerListCog(commands.Cog):
         """Автодополнение для списка серверов."""
         return [srv.name for srv in self.servers]
 
-    def create_embed_pages(self, title: str, items: list, color: discord.Color, footer:str) -> list:
-        """Создаёт страницы с Embed."""
+    def create_embed_pages(self, title: str, items: list, color: discord.Color, footer: str) -> list:
+        """Создаёт страницы с Embed"""
         embeds = []
         for i in range(0, len(items), 10):
             chunk = items[i:i + 10]
@@ -112,16 +111,12 @@ class PlayerListCog(commands.Cog):
         return embeds
 
     def get_list_data(self, selected_server, list_type):
-        """Получает данные для списка игроков или администраторов."""
+        """Получает данные для списка игроков или администраторов"""
         if list_type == "player_list":
             return fetch_player_list(selected_server)
         elif list_type == "admin_list":
             return fetch_admin_players(selected_server)
         return None
-
-    async def handle_no_data(self, ctx: discord.ApplicationContext, server_name: str) -> None:
-        """Обрабатывает случай отсутствия данных на сервере"""
-        await ctx.respond(f"На сервере **{server_name}** нет данных для выбранного типа списка", ephemeral=True)
 
     @commands.slash_command(description="Показать список игроков или администраторов на определённом сервере")
     async def show_player_list(
@@ -140,29 +135,26 @@ class PlayerListCog(commands.Cog):
         selected_server = servers[server]
         result = self.get_list_data(selected_server, list_type)
 
-        if isinstance(result, dict) and "error" in result:
-            await ctx.respond(f"Ошибка: {result['error']}", ephemeral=True)
-            return
-
-        if not result:
-            await self.handle_no_data(ctx, selected_server.name)
-            return
-
         # Формирование Embed
         title = f"{'Игроки' if list_type == 'player_list' else 'Администраторы'} на сервере {selected_server.name}"
         footer = f"Всего: {len(result)}"
         items = (
             [f"{player}" for player in result]
             if list_type == "player_list"
-            else [f"**{name}** - {details if details else 'Без поста'}" for name, details in result.items()]
+                else [
+            f"**{name}** {'[R]' if details['readmin'] else ''} - {details['title']}"
+            for name, details in result.items()
+            ]
         )
         embeds = self.create_embed_pages(title, items, self.colors[list_type], footer)
 
-        if embeds:
+        if isinstance(result, dict) and "error" in result:
+            await ctx.respond(f"Ошибка при запросе данных: {result['error']}", ephemeral=True)
+        elif embeds:
             view = PaginatedView(embeds)
             await view.send(ctx)
         else:
-            await self.handle_no_data(ctx, selected_server.name)
+            await ctx.respond(f"На сервере {selected_server.name} нет данных для выбранного списка", ephemeral=True)
 
 
 def setup(client):
