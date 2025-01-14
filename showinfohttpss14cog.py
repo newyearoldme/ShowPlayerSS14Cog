@@ -125,11 +125,11 @@ class PlayerListCog(commands.Cog):
         server: str = discord.Option(description="Выберите сервер", autocomplete=server_autocomplete),
         list_type: str = discord.Option(description="Выберите тип списка", choices=["player_list", "admin_list"]),
     ):
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
         servers = {srv.name: srv for srv in self.servers}
         if server not in servers:
-            await ctx.respond("Указанный сервер не найден", ephemeral=True)
+            await ctx.respond("Указанный сервер не найден")
             return
 
         selected_server = servers[server]
@@ -149,12 +149,12 @@ class PlayerListCog(commands.Cog):
         embeds = self.create_embed_pages(title, items, self.colors[list_type], footer)
 
         if isinstance(result, dict) and "error" in result:
-            await ctx.respond(f"Ошибка при запросе данных: {result['error']}", ephemeral=True)
+            await ctx.respond(f"Ошибка при запросе данных: {result['error']}")
         elif embeds:
             view = PaginatedView(embeds)
             await view.send(ctx)
         else:
-            await ctx.respond(f"На сервере {selected_server.name} нет данных для выбранного списка", ephemeral=True)
+            await ctx.respond(f"На сервере {selected_server.name} нет данных для выбранного списка")
 
 
 def setup(client):
