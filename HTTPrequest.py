@@ -19,26 +19,8 @@ def fetch_data(url: str, headers: dict):
         r = requests.get(url, headers=headers, timeout=10)
         if r.ok:
             return r.json()
-        
-        response_data = r.json()
-        if "ErrorCode" in response_data:
-            match response_data["ErrorCode"]:
-                case 2:
-                    return {"error": "Токен невалидный"}
-                case 6:
-                    return {"error": "Недействительное значение в заголовке авторизации. Проверьте токен"}
-                case _:
-                    return {"error": f"Сервер вернул ошибку: {response_data.get('Message', 'Неизвестная ошибка')}"}
-        
-        match r.status_code:
-            case 401:
-                return {"error": "Недействительный токен авторизации"}
-            case 403:
-                return {"error": "Доступ запрещен. Возможно, токен невалидный"}
-            case 404:
-                return {"error": "Сервер не найден"}
-            case _:
-                return {"error": f"HTTP {r.status_code}: {r.text}"}
+        else:
+            return {"error": f"HTTP {r.status_code}: {r.text}"}
     except requests.Timeout:
         return {"error": "Превышено время ожидания запроса"}
     except requests.RequestException as e:
